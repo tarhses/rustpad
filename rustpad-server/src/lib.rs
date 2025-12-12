@@ -11,6 +11,7 @@ use log::{error, info};
 use rand::Rng;
 use serde::Serialize;
 use tokio::time::{self, Instant};
+use uuid::Uuid;
 use warp::{filters::BoxedFilter, ws::Ws, Filter, Rejection, Reply};
 
 use crate::{database::Database, rustpad::Rustpad};
@@ -54,7 +55,7 @@ impl warp::reject::Reject for CustomReject {}
 #[derive(Clone)]
 struct ServerState {
     /// Concurrent map storing in-memory documents.
-    documents: Arc<DashMap<String, Document>>,
+    documents: Arc<DashMap<Uuid, Document>>,
     /// Connection to the database pool, if persistence is enabled.
     database: Option<Database>,
 }
@@ -98,7 +99,7 @@ pub fn server(config: ServerConfig) -> BoxedFilter<(impl Reply,)> {
 
 /// Construct routes for static files from React.
 fn frontend() -> BoxedFilter<(impl Reply,)> {
-    warp::fs::dir("dist").boxed()
+    warp::fs::dir("rustpad-client/dist").boxed()
 }
 
 /// Construct backend routes, including WebSocket handlers.
@@ -111,12 +112,12 @@ fn backend(config: ServerConfig) -> BoxedFilter<(impl Reply,)> {
 
     let state_filter = warp::any().map(move || state.clone());
 
-    let socket = warp::path!("socket" / String)
+    let socket = warp::path!("socket" / Uuid)
         .and(warp::ws())
         .and(state_filter.clone())
         .and_then(socket_handler);
 
-    let text = warp::path!("text" / String)
+    let text = warp::path!("text" / Uuid)
         .and(state_filter.clone())
         .and_then(text_handler);
 
@@ -133,14 +134,14 @@ fn backend(config: ServerConfig) -> BoxedFilter<(impl Reply,)> {
 }
 
 /// Handler for the `/api/socket/{id}` endpoint.
-async fn socket_handler(id: String, ws: Ws, state: ServerState) -> Result<impl Reply, Rejection> {
+async fn socket_handler(id: Uuid, ws: Ws, state: ServerState) -> Result<impl Reply, Rejection> {
     use dashmap::mapref::entry::Entry;
 
-    let mut entry = match state.documents.entry(id.clone()) {
+    let mut entry = match state.documents.entry(id) {
         Entry::Occupied(e) => e.into_ref(),
         Entry::Vacant(e) => {
             let rustpad = Arc::new(match &state.database {
-                Some(db) => db.load(&id).await.map(Rustpad::from).unwrap_or_default(),
+                Some(db) => db.load(id).await.map(Rustpad::from).unwrap_or_default(),
                 None => Rustpad::default(),
             });
             if let Some(db) = &state.database {
@@ -157,12 +158,12 @@ async fn socket_handler(id: String, ws: Ws, state: ServerState) -> Result<impl R
 }
 
 /// Handler for the `/api/text/{id}` endpoint.
-async fn text_handler(id: String, state: ServerState) -> Result<impl Reply, Rejection> {
+async fn text_handler(id: Uuid, state: ServerState) -> Result<impl Reply, Rejection> {
     Ok(match state.documents.get(&id) {
         Some(value) => value.rustpad.text(),
         None => {
             if let Some(db) = &state.database {
-                db.load(&id)
+                db.load(id)
                     .await
                     .map(|document| document.text)
                     .unwrap_or_default()
@@ -213,16 +214,16 @@ const PERSIST_INTERVAL: Duration = Duration::from_secs(3);
 const PERSIST_INTERVAL_JITTER: Duration = Duration::from_secs(1);
 
 /// Persists changed documents after a fixed time interval.
-async fn persister(id: String, rustpad: Arc<Rustpad>, db: Database) {
+async fn persister(id: Uuid, rustpad: Arc<Rustpad>, db: Database) {
     let mut last_revision = 0;
     while !rustpad.killed() {
         let interval = PERSIST_INTERVAL
-            + rand::thread_rng().gen_range(Duration::ZERO..=PERSIST_INTERVAL_JITTER);
+            + rand::rng().random_range(Duration::ZERO..=PERSIST_INTERVAL_JITTER);
         time::sleep(interval).await;
         let revision = rustpad.revision();
         if revision > last_revision {
             info!("persisting revision {} for id = {}", revision, id);
-            if let Err(e) = db.store(&id, &rustpad.snapshot()).await {
+            if let Err(e) = db.store(id, &rustpad.snapshot()).await {
                 error!("when persisting document {}: {}", id, e);
             } else {
                 last_revision = revision;

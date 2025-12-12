@@ -8,6 +8,7 @@ use operational_transform::OperationSeq;
 use rustpad_server::{server, ServerConfig};
 use serde_json::json;
 use tokio::time;
+use uuid::Uuid;
 
 pub mod common;
 
@@ -19,9 +20,11 @@ async fn test_cleanup() -> Result<()> {
         ..ServerConfig::default()
     });
 
-    expect_text(&filter, "old", "").await;
+    let id = Uuid::from_u128(0x723ccd4038aa4548bca6b88fccbd0022);
 
-    let mut client = connect(&filter, "old").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -38,15 +41,15 @@ async fn test_cleanup() -> Result<()> {
     let msg = client.recv().await?;
     msg.get("History")
         .expect("should receive history operation");
-    expect_text(&filter, "old", "hello").await;
+    expect_text(&filter, id, "hello").await;
 
     let hour = Duration::from_secs(3600);
     time::pause();
     time::advance(47 * hour).await;
-    expect_text(&filter, "old", "hello").await;
+    expect_text(&filter, id, "hello").await;
 
     time::advance(3 * hour).await;
-    expect_text(&filter, "old", "").await;
+    expect_text(&filter, id, "").await;
 
     Ok(())
 }

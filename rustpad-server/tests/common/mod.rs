@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
+use uuid::Uuid;
 use warp::{filters::BoxedFilter, test::WsClient, Reply};
 
 /// A test WebSocket client that sends and receives JSON messages.
@@ -24,7 +25,7 @@ impl JsonSocket {
 /// Connect a new test client WebSocket.
 pub async fn connect(
     filter: &BoxedFilter<(impl Reply + 'static,)>,
-    id: &str,
+    id: Uuid,
 ) -> Result<JsonSocket> {
     let client = warp::test::ws()
         .path(&format!("/api/socket/{}", id))
@@ -34,7 +35,7 @@ pub async fn connect(
 }
 
 /// Check the text route.
-pub async fn expect_text(filter: &BoxedFilter<(impl Reply + 'static,)>, id: &str, text: &str) {
+pub async fn expect_text(filter: &BoxedFilter<(impl Reply + 'static,)>, id: Uuid, text: &str) {
     let resp = warp::test::request()
         .path(&format!("/api/text/{}", id))
         .reply(filter)

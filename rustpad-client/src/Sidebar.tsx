@@ -13,7 +13,6 @@ import {
   Text,
   useToast,
 } from "@chakra-ui/react";
-import { VscRepo } from "react-icons/vsc";
 
 import ConnectionStatus from "./ConnectionStatus";
 import User from "./User";
@@ -29,7 +28,6 @@ export type SidebarProps = {
   users: Record<number, UserInfo>;
   onDarkModeChange: () => void;
   onLanguageChange: (language: string) => void;
-  onLoadSample: () => void;
   onChangeName: (name: string) => void;
   onChangeColor: () => void;
 };
@@ -43,7 +41,6 @@ function Sidebar({
   users,
   onDarkModeChange,
   onLanguageChange,
-  onLoadSample,
   onChangeName,
   onChangeColor,
 }: SidebarProps) {
@@ -162,19 +159,6 @@ function Sidebar({
         </Link>{" "}
         for details.
       </Text>
-
-      <Button
-        size="sm"
-        colorScheme={darkMode ? "whiteAlpha" : "blackAlpha"}
-        borderColor={darkMode ? "purple.400" : "purple.600"}
-        color={darkMode ? "purple.400" : "purple.600"}
-        variant="outline"
-        leftIcon={<VscRepo />}
-        mt={1}
-        onClick={onLoadSample}
-      >
-        Read the code
-      </Button>
     </Container>
   );
 }

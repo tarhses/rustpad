@@ -12,6 +12,7 @@ use rustpad_server::{
 use serde_json::json;
 use tempfile::NamedTempFile;
 use tokio::time;
+use uuid::Uuid;
 
 pub mod common;
 
@@ -32,29 +33,32 @@ async fn test_database() -> Result<()> {
 
     let database = Database::new(&temp_sqlite_uri()?).await?;
 
-    assert!(database.load("hello").await.is_err());
-    assert!(database.load("world").await.is_err());
+    let id1 = Uuid::from_u128(0xdcbc8e56caf747c98aebcf65edae16b4);
+    let id2 = Uuid::from_u128(0x1b2557bfb80044b1b3f27f7440719b48);
+
+    assert!(database.load(id1).await.is_err());
+    assert!(database.load(id2).await.is_err());
 
     let doc1 = PersistedDocument {
         text: "Hello Text".into(),
         language: None,
     };
 
-    assert!(database.store("hello", &doc1).await.is_ok());
-    assert_eq!(database.load("hello").await?, doc1);
-    assert!(database.load("world").await.is_err());
+    assert!(database.store(id1, &doc1).await.is_ok());
+    assert_eq!(database.load(id1).await?, doc1);
+    assert!(database.load(id2).await.is_err());
 
     let doc2 = PersistedDocument {
         text: "print('World Text :)')".into(),
         language: Some("python".into()),
     };
 
-    assert!(database.store("world", &doc2).await.is_ok());
-    assert_eq!(database.load("hello").await?, doc1);
-    assert_eq!(database.load("world").await?, doc2);
+    assert!(database.store(id2, &doc2).await.is_ok());
+    assert_eq!(database.load(id1).await?, doc1);
+    assert_eq!(database.load(id2).await?, doc2);
 
-    assert!(database.store("hello", &doc2).await.is_ok());
-    assert_eq!(database.load("hello").await?, doc2);
+    assert!(database.store(id1, &doc2).await.is_ok());
+    assert_eq!(database.load(id1).await?, doc2);
 
     Ok(())
 }
@@ -68,9 +72,11 @@ async fn test_persist() -> Result<()> {
         database: Some(Database::new(&temp_sqlite_uri()?).await?),
     });
 
-    expect_text(&filter, "persist", "").await;
+    let id = Uuid::from_u128(0x95a61a2fd5144f2fa57e49e7acfec2c5);
 
-    let mut client = connect(&filter, "persist").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -87,12 +93,12 @@ async fn test_persist() -> Result<()> {
     let msg = client.recv().await?;
     msg.get("History")
         .expect("should receive history operation");
-    expect_text(&filter, "persist", "hello").await;
+    expect_text(&filter, id, "hello").await;
 
     let hour = Duration::from_secs(3600);
     time::pause();
     time::advance(47 * hour).await;
-    expect_text(&filter, "persist", "hello").await;
+    expect_text(&filter, id, "hello").await;
 
     // Give SQLite some time to actually update the database.
     time::resume();
@@ -100,7 +106,7 @@ async fn test_persist() -> Result<()> {
     time::pause();
 
     time::advance(3 * hour).await;
-    expect_text(&filter, "persist", "hello").await;
+    expect_text(&filter, id, "hello").await;
 
     Ok(())
 }

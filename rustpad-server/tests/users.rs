@@ -4,6 +4,7 @@ use anyhow::Result;
 use common::*;
 use rustpad_server::{server, ServerConfig};
 use serde_json::json;
+use uuid::Uuid;
 
 pub mod common;
 
@@ -12,7 +13,9 @@ async fn test_two_users() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "foobar").await?;
+    let id = Uuid::from_u128(0x6618d6e5f8f341e2b55368f8d8937607);
+
+    let mut client = connect(&filter, id).await?;
     assert_eq!(client.recv().await?, json!({ "Identity": 0 }));
 
     let alice = json!({
@@ -29,7 +32,7 @@ async fn test_two_users() -> Result<()> {
     });
     assert_eq!(client.recv().await?, alice_info);
 
-    let mut client2 = connect(&filter, "foobar").await?;
+    let mut client2 = connect(&filter, id).await?;
     assert_eq!(client2.recv().await?, json!({ "Identity": 1 }));
     assert_eq!(client2.recv().await?, alice_info);
 
@@ -56,7 +59,9 @@ async fn test_invalid_user() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "foobar").await?;
+    let id = Uuid::from_u128(0x659fa0e91c6b4d71a3bf8ade2ffbc2ca);
+
+    let mut client = connect(&filter, id).await?;
     assert_eq!(client.recv().await?, json!({ "Identity": 0 }));
 
     let alice = json!({ "name": "Alice" }); // no hue
@@ -71,7 +76,9 @@ async fn test_leave_rejoin() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "foobar").await?;
+    let id = Uuid::from_u128(0x25ff89bfd92d4d93ba0d14fa33fdadb5);
+
+    let mut client = connect(&filter, id).await?;
     assert_eq!(client.recv().await?, json!({ "Identity": 0 }));
 
     let alice = json!({
@@ -91,7 +98,7 @@ async fn test_leave_rejoin() -> Result<()> {
     client.send(&json!({ "Invalid": "please close" })).await;
     client.recv_closed().await?;
 
-    let mut client2 = connect(&filter, "foobar").await?;
+    let mut client2 = connect(&filter, id).await?;
     assert_eq!(client2.recv().await?, json!({ "Identity": 1 }));
 
     let bob = json!({
@@ -116,7 +123,9 @@ async fn test_cursors() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "foobar").await?;
+    let id = Uuid::from_u128(0x1757801f8c6e4eaeb2730ce52698283f);
+
+    let mut client = connect(&filter, id).await?;
     assert_eq!(client.recv().await?, json!({ "Identity": 0 }));
 
     let cursors = json!({
@@ -133,7 +142,7 @@ async fn test_cursors() -> Result<()> {
     });
     assert_eq!(client.recv().await?, cursors_resp);
 
-    let mut client2 = connect(&filter, "foobar").await?;
+    let mut client2 = connect(&filter, id).await?;
     assert_eq!(client2.recv().await?, json!({ "Identity": 1 }));
     assert_eq!(client2.recv().await?, cursors_resp);
 
@@ -163,7 +172,7 @@ async fn test_cursors() -> Result<()> {
     });
     client2.send(&msg).await;
 
-    let mut client3 = connect(&filter, "foobar").await?;
+    let mut client3 = connect(&filter, id).await?;
     assert_eq!(client3.recv().await?, json!({ "Identity": 2 }));
     client3.recv().await?;
 

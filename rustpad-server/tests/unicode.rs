@@ -8,15 +8,18 @@ use log::info;
 use operational_transform::OperationSeq;
 use rustpad_server::{server, ServerConfig};
 use serde_json::json;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_unicode_length() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    expect_text(&filter, "unicode", "").await;
+    let id = Uuid::from_u128(0xcf228e397d1144d9b6488c1f5fa88171);
 
-    let mut client = connect(&filter, "unicode").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -69,7 +72,7 @@ async fn test_unicode_length() -> Result<()> {
         })
     );
 
-    expect_text(&filter, "unicode", "").await;
+    expect_text(&filter, id, "").await;
 
     Ok(())
 }
@@ -79,9 +82,11 @@ async fn test_multiple_operations() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    expect_text(&filter, "unicode", "").await;
+    let id = Uuid::from_u128(0x9991871eb6c6456dac6f5c36515dd01c);
 
-    let mut client = connect(&filter, "unicode").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -136,7 +141,7 @@ async fn test_multiple_operations() -> Result<()> {
         })
     );
 
-    expect_text(&filter, "unicode", "👯‍♂️🎉😍𒀇𐅣𐅤𐅥👨‍👨‍👦‍👦").await;
+    expect_text(&filter, id, "👯‍♂️🎉😍𒀇𐅣𐅤𐅥👨‍👨‍👦‍👦").await;
 
     let mut operation = OperationSeq::default();
     operation.retain(2);
@@ -164,7 +169,7 @@ async fn test_multiple_operations() -> Result<()> {
         })
     );
 
-    expect_text(&filter, "unicode", "👯‍♂️🎉😍h̷̙̤̏͊̑̍̆̃̉͝ĕ̶̠̌̓̃̓̽̃̚l̸̥̊̓̓͝͠l̸̨̠̣̟̥͠ỏ̴̳̖̪̟̱̰̥̞̙̏̓́͗̽̀̈́͛͐̚̕͝͝ ̶̡͍͙͚̞͙̣̘͙̯͇̙̠̀w̷̨̨̪͚̤͙͖̝͕̜̭̯̝̋̋̿̿̀̾͛̐̏͘͘̕͝ǒ̴̙͉͈̗̖͍̘̥̤̒̈́̒͠r̶̨̡̢̦͔̙̮̦͖͔̩͈̗̖̂̀l̶̡̢͚̬̤͕̜̀͛̌̈́̈́͑͋̈̍̇͊͝͠ď̵̛̛̯͕̭̩͖̝̙͎̊̏̈́̎͊̐̏͊̕͜͝͠͝𒀇𐅣𐅤𐅥👨‍👨‍👦‍👦").await;
+    expect_text(&filter, id, "👯‍♂️🎉😍h̷̙̤̏͊̑̍̆̃̉͝ĕ̶̠̌̓̃̓̽̃̚l̸̥̊̓̓͝͠l̸̨̠̣̟̥͠ỏ̴̳̖̪̟̱̰̥̞̙̏̓́͗̽̀̈́͛͐̚̕͝͝ ̶̡͍͙͚̞͙̣̘͙̯͇̙̠̀w̷̨̨̪͚̤͙͖̝͕̜̭̯̝̋̋̿̿̀̾͛̐̏͘͘̕͝ǒ̴̙͉͈̗̖͍̘̥̤̒̈́̒͠r̶̨̡̢̦͔̙̮̦͖͔̩͈̗̖̂̀l̶̡̢͚̬̤͕̜̀͛̌̈́̈́͑͋̈̍̇͊͝͠ď̵̛̛̯͕̭̩͖̝̙͎̊̏̈́̎͊̐̏͊̕͜͝͠͝𒀇𐅣𐅤𐅥👨‍👨‍👦‍👦").await;
 
     Ok(())
 }
@@ -174,7 +179,9 @@ async fn test_unicode_cursors() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "unicode").await?;
+    let id = Uuid::from_u128(0x0bc99e816f9f4c04a59cf982342488e2);
+
+    let mut client = connect(&filter, id).await?;
     assert_eq!(client.recv().await?, json!({ "Identity": 0 }));
 
     let mut operation = OperationSeq::default();
@@ -203,7 +210,7 @@ async fn test_unicode_cursors() -> Result<()> {
     });
     assert_eq!(client.recv().await?, cursors_resp);
 
-    let mut client2 = connect(&filter, "unicode").await?;
+    let mut client2 = connect(&filter, id).await?;
     assert_eq!(client2.recv().await?, json!({ "Identity": 1 }));
     client2.recv().await?;
     assert_eq!(client2.recv().await?, cursors_resp);
@@ -216,7 +223,7 @@ async fn test_unicode_cursors() -> Result<()> {
     });
     client2.send(&msg).await;
 
-    let mut client3 = connect(&filter, "unicode").await?;
+    let mut client3 = connect(&filter, id).await?;
     assert_eq!(client3.recv().await?, json!({ "Identity": 2 }));
     client3.recv().await?;
 

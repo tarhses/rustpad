@@ -9,6 +9,7 @@ use operational_transform::OperationSeq;
 use rustpad_server::{server, ServerConfig};
 use serde_json::json;
 use tokio::time;
+use uuid::Uuid;
 
 pub mod common;
 
@@ -17,9 +18,11 @@ async fn test_single_operation() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    expect_text(&filter, "foobar", "").await;
+    let id = Uuid::from_u128(0x20f6e930d89c40188df8968b76182c82);
 
-    let mut client = connect(&filter, "foobar").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -47,7 +50,7 @@ async fn test_single_operation() -> Result<()> {
         })
     );
 
-    expect_text(&filter, "foobar", "hello").await;
+    expect_text(&filter, id, "hello").await;
     Ok(())
 }
 
@@ -56,9 +59,11 @@ async fn test_invalid_operation() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    expect_text(&filter, "foobar", "").await;
+    let id = Uuid::from_u128(0x2813ac8a27df489f8d966fddc2efc877);
 
-    let mut client = connect(&filter, "foobar").await?;
+    expect_text(&filter, id, "").await;
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -82,8 +87,10 @@ async fn test_concurrent_transform() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
+    let id = Uuid::from_u128(0x9137e686d6d8451694fc7f43f9707668);
+
     // Connect the first client
-    let mut client = connect(&filter, "foobar").await?;
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -139,10 +146,10 @@ async fn test_concurrent_transform() -> Result<()> {
             }
         })
     );
-    expect_text(&filter, "foobar", "henlo").await;
+    expect_text(&filter, id, "henlo").await;
 
     // Connect the second client
-    let mut client2 = connect(&filter, "foobar").await?;
+    let mut client2 = connect(&filter, id).await?;
     let msg = client2.recv().await?;
     assert_eq!(msg, json!({ "Identity": 1 }));
 
@@ -192,7 +199,7 @@ async fn test_concurrent_transform() -> Result<()> {
     let msg = client2.recv().await?;
     assert_eq!(msg, transformed_op);
 
-    expect_text(&filter, "foobar", "~rust~henlo").await;
+    expect_text(&filter, id, "~rust~henlo").await;
     Ok(())
 }
 
@@ -201,7 +208,9 @@ async fn test_set_language() -> Result<()> {
     pretty_env_logger::try_init().ok();
     let filter = server(ServerConfig::default());
 
-    let mut client = connect(&filter, "foobar").await?;
+    let id = Uuid::from_u128(0xa0f2aef1f6f74887a8e85109a7ca8f9f);
+
+    let mut client = connect(&filter, id).await?;
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Identity": 0 }));
 
@@ -211,7 +220,7 @@ async fn test_set_language() -> Result<()> {
     let msg = client.recv().await?;
     assert_eq!(msg, json!({ "Language": "javascript" }));
 
-    let mut client2 = connect(&filter, "foobar").await?;
+    let mut client2 = connect(&filter, id).await?;
     let msg = client2.recv().await?;
     assert_eq!(msg, json!({ "Identity": 1 }));
     let msg = client2.recv().await?;
@@ -225,6 +234,6 @@ async fn test_set_language() -> Result<()> {
     let msg = client2.recv().await?;
     assert_eq!(msg, json!({ "Language": "python" }));
 
-    expect_text(&filter, "foobar", "").await;
+    expect_text(&filter, id, "").await;
     Ok(())
 }

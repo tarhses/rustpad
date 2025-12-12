@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, SqlitePool};
+use uuid::Uuid;
 
 /// Represents a document persisted in database storage.
 #[derive(sqlx::FromRow, PartialEq, Eq, Clone, Debug)]
@@ -37,7 +38,7 @@ impl Database {
     }
 
     /// Load the text of a document from the database.
-    pub async fn load(&self, document_id: &str) -> Result<PersistedDocument> {
+    pub async fn load(&self, document_id: Uuid) -> Result<PersistedDocument> {
         sqlx::query_as(r#"SELECT text, language FROM document WHERE id = $1"#)
             .bind(document_id)
             .fetch_one(&self.pool)
@@ -46,7 +47,7 @@ impl Database {
     }
 
     /// Store the text of a document in the database.
-    pub async fn store(&self, document_id: &str, document: &PersistedDocument) -> Result<()> {
+    pub async fn store(&self, document_id: Uuid, document: &PersistedDocument) -> Result<()> {
         let result = sqlx::query(
             r#"
 INSERT INTO
